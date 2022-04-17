@@ -56,7 +56,7 @@ proc writeProgressLine(mp: Multiprog) =
   mp.f.cursorMoveLine(downCount)
 
   let
-    rhsSize = 1 + 1 + reprSize(mp.doneCount) + reprSize(mp.totalCount)
+    rhsSize = 1 + reprSize(mp.doneCount) + 1 + reprSize(mp.totalCount) + 1
     size = terminalWidth() - rhsSize - 2
     ratio = mp.doneCount / mp.totalCount
     filledCount = floor(ratio * size.float).int
