@@ -103,6 +103,7 @@ proc startJob*(mp: var Multiprog; message: string): JobId =
 
   mp.f.cursorMoveLine(slotIdx - mp.curLine)
   mp.curLine = slotIdx
+  mp.f.eraseLine()
   mp.f.write(message)
   mp.writeProgressLine()
 
