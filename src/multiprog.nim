@@ -59,6 +59,7 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string) =
   mp.cursorToSlot(slotIdx)
   mp.f.eraseLine()
   mp.f.write(message)
+  mp.f.flushFile()
 
 proc writeProgressLine(mp: var Multiprog) =
   mp.cursorToSlot(-1)
@@ -72,6 +73,7 @@ proc writeProgressLine(mp: var Multiprog) =
   mp.f.write(' '.repeat(size - filledCount))
   mp.f.write("]")
   mp.f.write(" ", mp.doneCount, "/", mp.totalCount)
+  mp.f.flushFile()
 
 proc initMultiprog*(slotsCount: int; totalCount = -1; outFile = stdout): Multiprog =
   result.slots = newSeq[bool](slotsCount)

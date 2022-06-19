@@ -14,7 +14,7 @@ const
   PoolSize = 8
   Count = 50
 var
-  inputs = collect(for i in 0..<Count: i)
+  inputs = (0..<Count).toSeq
   mp = initMultiprog(PoolSize, inputs.len)
 
 proc doStuff(n: int): Future[void] {.async.} =
