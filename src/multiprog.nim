@@ -14,7 +14,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import std/terminal
-import std/options
 import std/strutils
 import std/math
 
@@ -49,12 +48,6 @@ proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
   mp.f.cursorMoveLine(slotIdx - mp.curSlotIdx)
   mp.curSlotIdx = slotIdx
 
-template reprSize(n: Natural): int =
-  if n == 0:
-    1
-  else:
-    log10(n.float).int + 1
-
 proc writeSlot(mp: var Multiprog; slotIdx: int; message: string) =
   mp.cursorToSlot(slotIdx)
   mp.f.eraseLine()
@@ -64,7 +57,9 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string) =
 proc writeProgressLine(mp: var Multiprog) =
   mp.cursorToSlot(-1)
   let
-    rhsSize = 1 + reprSize(mp.doneCount) + 1 + reprSize(mp.totalCount) + 1
+    doneCountStr = $mp.doneCount
+    totalCountStr = $mp.totalCount
+    rhsSize = 1 + doneCountStr.len + 1 + totalCountStr.len + 1
     size = terminalWidth() - rhsSize - 2
     ratio = mp.doneCount / mp.totalCount
     filledCount = floor(ratio * size.float).int
@@ -72,7 +67,7 @@ proc writeProgressLine(mp: var Multiprog) =
   mp.f.write('#'.repeat(filledCount))
   mp.f.write(' '.repeat(size - filledCount))
   mp.f.write("]")
-  mp.f.write(" ", mp.doneCount, "/", mp.totalCount)
+  mp.f.write(" ", doneCountStr, "/", totalCountStr)
   mp.f.flushFile()
 
 proc initMultiprog*(slotsCount: int; totalCount = -1; outFile = stdout): Multiprog =
