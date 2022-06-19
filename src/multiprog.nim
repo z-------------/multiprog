@@ -30,7 +30,7 @@ type
   JobId* = distinct int
 
 template checkState(mp: Multiprog) =
-  assert not mp.isFinished
+  doAssert not mp.isFinished
 
 proc cursorMoveLine(f: File; count: int) =
   if count == 0:
