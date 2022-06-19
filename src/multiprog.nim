@@ -56,9 +56,7 @@ template reprSize(n: Natural): int =
     log10(n.float).int + 1
 
 proc writeProgressLine(mp: var Multiprog) =
-  let initialSlotIdx = mp.curSlotIdx
   mp.cursorToSlot(mp.slots.len)
-
   let
     rhsSize = 1 + reprSize(mp.doneCount) + 1 + reprSize(mp.totalCount) + 1
     size = terminalWidth() - rhsSize - 2
@@ -69,8 +67,6 @@ proc writeProgressLine(mp: var Multiprog) =
   mp.f.write(' '.repeat(size - filledCount))
   mp.f.write("]")
   mp.f.write(" ", mp.doneCount, "/", mp.totalCount)
-
-  mp.cursorToSlot(initialSlotIdx)
 
 proc initMultiprog*(slotsCount: int; totalCount = -1; outFile = stdout): Multiprog =
   result.slots = newSeq[bool](slotsCount)
