@@ -54,20 +54,23 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string) =
   mp.f.write(message)
   mp.f.flushFile()
 
-proc writeProgressLine(mp: var Multiprog) =
-  mp.cursorToSlot(-1)
+func buildProgressLine(mp: Multiprog; width: int): string =
   let
     doneCountStr = $mp.doneCount
     totalCountStr = $mp.totalCount
     rhsSize = 1 + doneCountStr.len + 1 + totalCountStr.len + 1
-    size = terminalWidth() - rhsSize - 2
+    size = width - rhsSize - 2
     ratio = mp.doneCount / mp.totalCount
     filledCount = floor(ratio * size.float).int
-  mp.f.write("[")
-  mp.f.write('#'.repeat(filledCount))
-  mp.f.write(' '.repeat(size - filledCount))
-  mp.f.write("]")
-  mp.f.write(" ", doneCountStr, "/", totalCountStr)
+  result.add("[")
+  result.add('#'.repeat(filledCount))
+  result.add(' '.repeat(size - filledCount))
+  result.add("]")
+  result.add(" " & doneCountStr & "/" & totalCountStr)
+
+proc writeProgressLine(mp: var Multiprog) =
+  mp.cursorToSlot(-1)
+  mp.f.write(mp.buildProgressLine(terminalWidth()))
   mp.f.flushFile()
 
 proc initMultiprog*(slotsCount: int; totalCount = -1; outFile = stdout): Multiprog =
