@@ -55,8 +55,13 @@ template reprSize(n: Natural): int =
   else:
     log10(n.float).int + 1
 
+proc writeSlot(mp: var Multiprog; slotIdx: int; message: string) =
+  mp.cursorToSlot(slotIdx)
+  mp.f.eraseLine()
+  mp.f.write(message)
+
 proc writeProgressLine(mp: var Multiprog) =
-  mp.cursorToSlot(mp.slots.len)
+  mp.cursorToSlot(-1)
   let
     rhsSize = 1 + reprSize(mp.doneCount) + 1 + reprSize(mp.totalCount) + 1
     size = terminalWidth() - rhsSize - 2
@@ -80,7 +85,7 @@ proc initMultiprog*(slotsCount: int; totalCount = -1; outFile = stdout): Multipr
 
   for _ in 0 ..< slotsCount + 1:
     result.f.writeLine("")
-  result.f.cursorUp(slotsCount + 1)
+  result.f.cursorUp(slotsCount)
 
 proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
   mp.totalCount = totalCount
@@ -89,7 +94,9 @@ proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
 proc finish*(mp: var Multiprog) =
   if not mp.isFinished:
     mp.isFinished = true
-    mp.cursorToSlot(mp.slots.len)
+    for slotIdx in 0..mp.slots.high:
+      mp.writeSlot(slotIdx, "")
+    mp.cursorToSlot(-1)
     mp.f.writeLine("")
 
 proc startJob*(mp: var Multiprog; message: string): JobId =
@@ -101,9 +108,7 @@ proc startJob*(mp: var Multiprog; message: string): JobId =
   let slotIdx = mp.slots.find(false)
   mp.slots[slotIdx] = true
 
-  mp.cursorToSlot(slotIdx)
-  mp.f.eraseLine()
-  mp.f.write(message)
+  mp.writeSlot(slotIdx, message)
   mp.writeProgressLine()
 
   JobId(slotIdx)
@@ -113,9 +118,7 @@ proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
 
   let slotIdx = jobId.int
 
-  mp.cursorToSlot(slotIdx)
-  mp.f.eraseLine()
-  mp.f.write(message)
+  mp.writeSlot(slotIdx, message)
 
   mp.slots[slotIdx] = false
   inc mp.doneCount
