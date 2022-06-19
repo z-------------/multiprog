@@ -20,7 +20,7 @@ import std/math
 
 type
   Multiprog* = object
-    curLine: int
+    curSlotIdx: int
     slots: seq[bool]
     isTotalCountGiven: bool
     totalCount: int
@@ -45,15 +45,19 @@ proc cursorMoveLine(f: File; count: int) =
     except OSError:
       discard
 
+proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
+  mp.f.cursorMoveLine(slotIdx - mp.curSlotIdx)
+  mp.curSlotIdx = slotIdx
+
 template reprSize(n: Natural): int =
   if n == 0:
     1
   else:
     log10(n.float).int + 1
 
-proc writeProgressLine(mp: Multiprog) =
-  let downCount = mp.slots.len - mp.curLine
-  mp.f.cursorMoveLine(downCount)
+proc writeProgressLine(mp: var Multiprog) =
+  let initialSlotIdx = mp.curSlotIdx
+  mp.cursorToSlot(mp.slots.len)
 
   let
     rhsSize = 1 + reprSize(mp.doneCount) + 1 + reprSize(mp.totalCount) + 1
@@ -66,7 +70,7 @@ proc writeProgressLine(mp: Multiprog) =
   mp.f.write("]")
   mp.f.write(" ", mp.doneCount, "/", mp.totalCount)
 
-  mp.f.cursorMoveLine(-downCount)
+  mp.cursorToSlot(initialSlotIdx)
 
 proc initMultiprog*(slotsCount: int; totalCount = -1; outFile = stdout): Multiprog =
   result.slots = newSeq[bool](slotsCount)
@@ -89,7 +93,7 @@ proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
 proc finish*(mp: var Multiprog) =
   if not mp.isFinished:
     mp.isFinished = true
-    mp.f.cursorDown(mp.slots.len - mp.curLine)
+    mp.cursorToSlot(mp.slots.len)
     mp.f.writeLine("")
 
 proc startJob*(mp: var Multiprog; message: string): JobId =
@@ -101,8 +105,7 @@ proc startJob*(mp: var Multiprog; message: string): JobId =
   let slotIdx = mp.slots.find(false)
   mp.slots[slotIdx] = true
 
-  mp.f.cursorMoveLine(slotIdx - mp.curLine)
-  mp.curLine = slotIdx
+  mp.cursorToSlot(slotIdx)
   mp.f.eraseLine()
   mp.f.write(message)
   mp.writeProgressLine()
@@ -114,8 +117,7 @@ proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
 
   let slotIdx = jobId.int
 
-  mp.f.cursorMoveLine(slotIdx - mp.curLine)
-  mp.curLine = slotIdx
+  mp.cursorToSlot(slotIdx)
   mp.f.eraseLine()
   mp.f.write(message)
 
