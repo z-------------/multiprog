@@ -25,6 +25,7 @@ type
   Multiprog* = object
     curSlotIdx: int
     jobs: seq[bool]
+    slots: seq[string]
     isTotalCountGiven: bool
     totalCount: int
     doneCount: int
@@ -55,12 +56,17 @@ proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
   mp.f.cursorMoveLine(slotIdx - mp.curSlotIdx)
   mp.curSlotIdx = slotIdx
 
-proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true) =
+proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true; memorize: static bool = true) =
+  when memorize:
+    mp.slots[slotIdx] = message
   mp.cursorToSlot(slotIdx)
   when erase:
     mp.f.eraseLine()
   mp.f.write(message)
   mp.f.flushFile()
+
+proc writeLog(mp: var Multiprog; message: string) =
+  mp.writeSlot(0, message, memorize = false)
 
 func buildProgressLine(mp: Multiprog; width: int): string =
   let
@@ -81,7 +87,10 @@ proc writeProgressLine(mp: var Multiprog) =
   mp.writeSlot(ProgressSlotIdx, line, erase = false)
 
 proc initMultiprog*(jobsCount: int; totalCount = -1; outFile = stdout): Multiprog =
+  let slotsCount = jobsCount + 1
+
   result.jobs = newSeq[bool](jobsCount)
+  result.slots = newSeq[string](slotsCount)
   result.f = outFile
 
   if totalCount == -1:
@@ -90,7 +99,6 @@ proc initMultiprog*(jobsCount: int; totalCount = -1; outFile = stdout): Multipro
     result.totalCount = totalCount
     result.isTotalCountGiven = true
 
-  let slotsCount = jobsCount + 1
   for _ in 0 ..< slotsCount:
     result.f.writeLine("")
   result.f.cursorUp(slotsCount)
@@ -133,3 +141,10 @@ proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
 
   if mp.isTotalCountGiven and mp.doneCount == mp.totalCount:
     mp.finish()
+
+proc log*(mp: var Multiprog; message: string) =
+  mp.writeLog(message)
+  mp.f.writeLine("")
+  for slotContent in mp.slots:
+    mp.f.writeLine(slotContent)
+  mp.curSlotIdx = mp.slots.len

@@ -19,7 +19,10 @@ var
 
 proc doStuff(n: int): Future[void] {.async.} =
   let jobId = mp.startJob("working on " & $n & "...")
-  await sleepAsync(rand(500..1500))
+  await sleepAsync(rand(250..750))
+  if n mod 3 == 0:
+    mp.log("logging while working on " & $n & ".")
+  await sleepAsync(rand(250..750))
   mp.finishJob(jobId, "done with " & $n)
 
 waitFor asyncPool(inputs.mapIt(() => doStuff(it)), PoolSize)
