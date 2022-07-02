@@ -17,10 +17,14 @@ import std/terminal
 import std/strutils
 import std/math
 
+const
+  ProgressSlotIdx = 0
+  StatusSlotStartIdx = 1
+
 type
   Multiprog* = object
     curSlotIdx: int
-    slots: seq[bool]
+    jobs: seq[bool]
     isTotalCountGiven: bool
     totalCount: int
     doneCount: int
@@ -30,6 +34,9 @@ type
 
 template checkState(mp: Multiprog) =
   doAssert not mp.isFinished
+
+template jobSlotIdx[T: JobId or int](jobId: T): int =
+  StatusSlotStartIdx + jobId.int
 
 proc cursorMoveLine(f: File; count: int) =
   if count == 0:
@@ -48,9 +55,10 @@ proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
   mp.f.cursorMoveLine(slotIdx - mp.curSlotIdx)
   mp.curSlotIdx = slotIdx
 
-proc writeSlot(mp: var Multiprog; slotIdx: int; message: string) =
+proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true) =
   mp.cursorToSlot(slotIdx)
-  mp.f.eraseLine()
+  when erase:
+    mp.f.eraseLine()
   mp.f.write(message)
   mp.f.flushFile()
 
@@ -69,12 +77,11 @@ func buildProgressLine(mp: Multiprog; width: int): string =
   result.add(" " & doneCountStr & "/" & totalCountStr)
 
 proc writeProgressLine(mp: var Multiprog) =
-  mp.cursorToSlot(-1)
-  mp.f.write(mp.buildProgressLine(terminalWidth()))
-  mp.f.flushFile()
+  let line = mp.buildProgressLine(terminalWidth())
+  mp.writeSlot(ProgressSlotIdx, line, erase = false)
 
-proc initMultiprog*(slotsCount: int; totalCount = -1; outFile = stdout): Multiprog =
-  result.slots = newSeq[bool](slotsCount)
+proc initMultiprog*(jobsCount: int; totalCount = -1; outFile = stdout): Multiprog =
+  result.jobs = newSeq[bool](jobsCount)
   result.f = outFile
 
   if totalCount == -1:
@@ -83,7 +90,8 @@ proc initMultiprog*(slotsCount: int; totalCount = -1; outFile = stdout): Multipr
     result.totalCount = totalCount
     result.isTotalCountGiven = true
 
-  for _ in 0 ..< slotsCount + 1:
+  let slotsCount = jobsCount + 1
+  for _ in 0 ..< slotsCount:
     result.f.writeLine("")
   result.f.cursorUp(slotsCount)
 
@@ -94,9 +102,9 @@ proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
 proc finish*(mp: var Multiprog) =
   if not mp.isFinished:
     mp.isFinished = true
-    for slotIdx in 0..mp.slots.high:
-      mp.writeSlot(slotIdx, "")
-    mp.cursorToSlot(-1)
+    for jobIdx in 0..mp.jobs.high:
+      mp.writeSlot(jobSlotIdx(jobIdx), "")
+    mp.cursorToSlot(ProgressSlotIdx)
     mp.f.writeLine("")
 
 proc startJob*(mp: var Multiprog; message: string): JobId =
@@ -105,22 +113,20 @@ proc startJob*(mp: var Multiprog; message: string): JobId =
   if not mp.isTotalCountGiven:
     inc mp.totalCount
 
-  let slotIdx = mp.slots.find(false)
-  mp.slots[slotIdx] = true
+  let jobIdx = mp.jobs.find(false)
+  mp.jobs[jobIdx] = true
 
-  mp.writeSlot(slotIdx, message)
+  mp.writeSlot(jobSlotIdx(jobIdx), message)
   mp.writeProgressLine()
 
-  JobId(slotIdx)
+  JobId(jobIdx)
 
 proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
   mp.checkState()
 
-  let slotIdx = jobId.int
+  mp.writeSlot(jobSlotIdx(jobId), message)
 
-  mp.writeSlot(slotIdx, message)
-
-  mp.slots[slotIdx] = false
+  mp.jobs[jobId.int] = false
   inc mp.doneCount
 
   mp.writeProgressLine()

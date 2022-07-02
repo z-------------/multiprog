@@ -11,8 +11,8 @@ randomize()
 echo "About to do some stuff..."
 
 const
-  PoolSize = 8
-  Count = 50
+  PoolSize = 4
+  Count = 20
 var
   inputs = (0..<Count).toSeq
   mp = initMultiprog(PoolSize, inputs.len)
