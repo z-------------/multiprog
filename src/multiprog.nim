@@ -136,6 +136,8 @@ proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
     mp.finish()
 
 proc log*(mp: var Multiprog; message: string) =
+  mp.checkState()
+
   mp.cursorToSlot(0)
   mp.f.eraseLine()
   mp.f.writeLine(message & '\n' & mp.slots.join("\n"))
