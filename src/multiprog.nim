@@ -13,9 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import std/terminal
-import std/strutils
 import std/math
+import std/strutils
+import std/terminal
 
 const
   ProgressSlotIdx = 0
@@ -40,33 +40,26 @@ template jobSlotIdx[T: JobId or int](jobId: T): int =
   StatusSlotStartIdx + jobId.int
 
 proc cursorMoveLine(f: File; count: int) =
-  if count == 0:
+  try:
+    if count < 0:
+      f.cursorUp(-count)
+    elif count > 0:
+      f.cursorDown(count)
+    f.setCursorXPos(0)
+  except OSError:
     discard
-  else:
-    try:
-      if count < 0:
-        f.cursorUp(-count)
-      else:
-        f.cursorDown(count)
-      f.setCursorXPos(0)
-    except OSError:
-      discard
 
 proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
   mp.f.cursorMoveLine(slotIdx - mp.curSlotIdx)
   mp.curSlotIdx = slotIdx
 
-proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true; memorize: static bool = true) =
-  when memorize:
-    mp.slots[slotIdx] = message
+proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true) =
+  mp.slots[slotIdx] = message
   mp.cursorToSlot(slotIdx)
   when erase:
     mp.f.eraseLine()
   mp.f.write(message)
   mp.f.flushFile()
-
-proc writeLog(mp: var Multiprog; message: string) =
-  mp.writeSlot(0, message, memorize = false)
 
 func buildProgressLine(mp: Multiprog; width: int): string =
   let
@@ -143,8 +136,7 @@ proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
     mp.finish()
 
 proc log*(mp: var Multiprog; message: string) =
-  mp.writeLog(message)
-  mp.f.writeLine("")
-  for slotContent in mp.slots:
-    mp.f.writeLine(slotContent)
+  mp.cursorToSlot(0)
+  mp.f.eraseLine()
+  mp.f.writeLine(message & '\n' & mp.slots.join("\n"))
   mp.curSlotIdx = mp.slots.len
