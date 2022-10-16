@@ -122,10 +122,14 @@ proc startJob*(mp: var Multiprog; message: string): JobId =
 
   JobId(jobIdx)
 
+proc updateJob*(mp: var Multiprog; jobId: JobId; message: string) =
+  mp.checkState()
+  mp.writeSlot(jobSlotIdx(jobId), message)
+
 proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
   mp.checkState()
 
-  mp.writeSlot(jobSlotIdx(jobId), message)
+  mp.updateJob(jobId, message)
 
   mp.jobs[jobId.int] = false
   inc mp.doneCount
