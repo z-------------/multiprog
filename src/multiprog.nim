@@ -150,8 +150,9 @@ proc log*(mp: var Multiprog; message: string) =
   mp.checkState()
 
   mp.cursorToSlot(0)
-  mp.f.eraseLine()
-  mp.f.writeLine(message)
+  for line in message.splitLines:
+    mp.f.eraseLine()
+    mp.f.writeLine(line)
   for line in mp.slots:
     mp.f.eraseLine()
     mp.f.writeLine(line)
