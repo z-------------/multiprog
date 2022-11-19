@@ -54,6 +54,13 @@ proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
   mp.curSlotIdx = slotIdx
 
 proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true) =
+  let message = block:
+    let newlineIdx = message.find(Newlines)
+    if newlineIdx != -1:
+      message[0 ..< newlineIdx]
+    else:
+      message
+
   mp.slots[slotIdx] = message
   mp.cursorToSlot(slotIdx)
   when erase:
