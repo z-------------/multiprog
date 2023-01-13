@@ -31,6 +31,7 @@ type
     doneCount: int
     f: File
     isFinished: bool
+    progressBar: proc (width, doneCount, totalCount: int): string
   JobId* = distinct int
 
 template checkState(mp: Multiprog) =
@@ -68,14 +69,15 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static b
   mp.f.write(message)
   mp.f.flushFile()
 
-func buildProgressLine(mp: Multiprog; width: int): string =
+func defaultProgressBar*(width, doneCount, totalCount: int): string {.noInit.} =
   let
-    doneCountStr = $mp.doneCount
-    totalCountStr = $mp.totalCount
-    rhsSize = 1 + doneCountStr.len + 1 + totalCountStr.len + 1
+    doneCountStr = $doneCount
+    totalCountStr = $totalCount
+    rhsSize = 1 + doneCountStr.len + 1 + totalCountStr.len
     size = width - rhsSize - 2
-    ratio = mp.doneCount / mp.totalCount
+    ratio = doneCount / totalCount
     filledCount = floor(ratio * size.float).int
+  result = newStringOfCap(width)
   result.add("[")
   result.add('#'.repeat(filledCount))
   result.add(' '.repeat(size - filledCount))
@@ -83,15 +85,21 @@ func buildProgressLine(mp: Multiprog; width: int): string =
   result.add(" " & doneCountStr & "/" & totalCountStr)
 
 proc writeProgressLine(mp: var Multiprog) =
-  let line = mp.buildProgressLine(terminalWidth())
+  let line = mp.progressBar(terminalWidth(), mp.doneCount, mp.totalCount)
   mp.writeSlot(ProgressSlotIdx, line, erase = false)
 
-proc initMultiprog*(jobsCount: int; totalCount = -1; outFile = stdout): Multiprog =
+proc initMultiprog*(
+  jobsCount: int;
+  totalCount = -1;
+  outFile = stdout;
+  progressBar = defaultProgressBar;
+): Multiprog =
   let slotsCount = jobsCount + 1
 
   result.jobs = newSeq[bool](jobsCount)
   result.slots = newSeq[string](slotsCount)
   result.f = outFile
+  result.progressBar = progressBar
 
   if totalCount == -1:
     result.totalCount = 0
