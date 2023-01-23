@@ -71,7 +71,7 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static b
 
 func defaultProgressBar*(width, doneCount, totalCount: int): string {.noInit.} =
   let
-    rhs = " " & $doneCount & "/" & $totalCount & " "
+    rhs = " " & $doneCount & "/" & $totalCount
     size = width - rhs.len - 2
     ratio = doneCount / totalCount
     filledCount = floor(ratio * size.float).int
@@ -83,7 +83,7 @@ func defaultProgressBar*(width, doneCount, totalCount: int): string {.noInit.} =
   result.add(rhs)
 
 proc writeProgressLine(mp: var Multiprog) =
-  let line = mp.progressBar(terminalWidth(), mp.doneCount, mp.totalCount)
+  let line = mp.progressBar(terminalWidth() - 1, mp.doneCount, mp.totalCount)
   mp.writeSlot(ProgressSlotIdx, line, erase = false)
 
 proc initMultiprog*(
