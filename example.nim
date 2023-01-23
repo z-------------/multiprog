@@ -1,7 +1,6 @@
 import multiprog
 import pkg/asyncpools
 import std/[
-  math,
   random,
   sequtils,
   strformat,
