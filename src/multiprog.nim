@@ -35,7 +35,7 @@ type
   JobId* = distinct int
 
 template checkState(mp: Multiprog) =
-  doAssert not mp.isFinished
+  assert not mp.isFinished
 
 template jobSlotIdx[T: JobId or int](jobId: T): int =
   StatusSlotStartIdx + jobId.int
@@ -56,6 +56,7 @@ proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
 
 proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true) =
   let message = block:
+    let message = message.substr(0, terminalWidth() - 2)
     let newlineIdx = message.find(Newlines)
     if newlineIdx != -1:
       message[0 ..< newlineIdx]
