@@ -32,6 +32,7 @@ type
     f: File
     isFinished: bool
     progressBar: proc (width, doneCount, totalCount: int): string
+    trimMessages: bool
   JobId* = distinct int
 
 template checkState(mp: Multiprog) =
@@ -56,7 +57,11 @@ proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
 
 proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true) =
   let message = block:
-    let message = message.substr(0, terminalWidth() - 2)
+    let message =
+      if mp.trimMessages:
+        message.substr(0, terminalWidth() - 2)
+      else:
+        message
     let newlineIdx = message.find(Newlines)
     if newlineIdx != -1:
       message[0 ..< newlineIdx]
@@ -92,6 +97,7 @@ proc initMultiprog*(
   totalCount = -1;
   outFile = stdout;
   progressBar = defaultProgressBar;
+  trimMessages = true;
 ): Multiprog =
   let slotsCount = jobsCount + 1
 
@@ -99,6 +105,7 @@ proc initMultiprog*(
   result.slots = newSeq[string](slotsCount)
   result.f = outFile
   result.progressBar = progressBar
+  result.trimMessages = trimMessages
 
   if totalCount == -1:
     result.totalCount = 0
