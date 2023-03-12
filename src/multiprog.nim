@@ -30,12 +30,14 @@ type
     totalCount: int
     doneCount: int
     f: File
+    isInitialized: bool
     isFinished: bool
     progressBar: proc (width, doneCount, totalCount: int): string
     trimMessages: bool
   JobId* = distinct int
 
 template checkState(mp: Multiprog) =
+  assert mp.isInitialized
   assert not mp.isFinished
 
 template jobSlotIdx[T: JobId or int](jobId: T): int =
@@ -116,6 +118,8 @@ proc initMultiprog*(
   for _ in 0 ..< slotsCount:
     result.f.writeLine("")
   result.f.cursorUp(slotsCount)
+
+  result.isInitialized = true
 
 proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
   mp.totalCount = totalCount
