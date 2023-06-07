@@ -31,5 +31,6 @@ proc doStuff(n: int): Future[void] {.async.} =
   mp.finishJob(jobId, &"done with {n}")
 
 waitFor asyncPool(inputs.mapIt(() => doStuff(it)), 4)
+mp.finish()
 
 echo "Done doing stuff."

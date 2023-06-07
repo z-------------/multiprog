@@ -174,9 +174,6 @@ proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
 
   mp.writeProgressLine()
 
-  if mp.isTotalCountGiven and mp.doneCount == mp.totalCount:
-    mp.finish()
-
 proc log*(mp: var Multiprog; message: string) =
   mp.checkState()
 
