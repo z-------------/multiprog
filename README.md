@@ -9,16 +9,7 @@ import multiprog
 
 
 ```nim
-Multiprog = object
- curSlotIdx: int
- jobs: seq[bool]
- slots: seq[string]
- isTotalCountGiven: bool
- totalCount: int
- doneCount: int
- f: File
- isFinished: bool
- progressBar: proc (width, doneCount, totalCount: int): string
+Multiprog[T] = object
 ```
 
 ## **type** JobId
@@ -28,19 +19,12 @@ Multiprog = object
 JobId = distinct int
 ```
 
-## **proc** defaultProgressBar
+## **proc** init
 
 
 ```nim
-func defaultProgressBar(width, doneCount, totalCount: int): string {.noInit, raises: [].}
-```
-
-## **proc** initMultiprog
-
-
-```nim
-proc initMultiprog(jobsCount: int; totalCount = -1; outFile = stdout;
- progressBar = defaultProgressBar): Multiprog {.raises: [IOError, OSError], tags: [WriteIOEffect, RootEffect].}
+proc init(__553648190: typedesc[Multiprog]; totalCount = -1; outFile = stdout;
+ trimMessages = true; tag: typedesc = DefaultTag): Multiprog[tag]
 ```
 
 ## **proc** totalCount=
@@ -54,33 +38,33 @@ proc totalCount=(mp: var Multiprog; totalCount: Natural)
 
 
 ```nim
-proc finish(mp: var Multiprog) {.raises: [OSError, IOError], tags: [RootEffect, WriteIOEffect].}
+proc finish(mp: var Multiprog)
 ```
 
 ## **proc** startJob
 
 
 ```nim
-proc startJob(mp: var Multiprog; message: string): JobId {.raises: [OSError, IOError, Exception], tags: [RootEffect, WriteIOEffect].}
+proc startJob(mp: var Multiprog; message: string): JobId
 ```
 
 ## **proc** updateJob
 
 
 ```nim
-proc updateJob(mp: var Multiprog; jobId: JobId; message: string) {.raises: [OSError, IOError], tags: [RootEffect, WriteIOEffect].}
+proc updateJob(mp: var Multiprog; jobId: JobId; message: string)
 ```
 
 ## **proc** finishJob
 
 
 ```nim
-proc finishJob(mp: var Multiprog; jobId: JobId; message: string) {.raises: [OSError, IOError, Exception], tags: [RootEffect, WriteIOEffect].}
+proc finishJob(mp: var Multiprog; jobId: JobId; message: string)
 ```
 
 ## **proc** log
 
 
 ```nim
-proc log(mp: var Multiprog; message: string) {.raises: [OSError, IOError], tags: [RootEffect, WriteIOEffect].}
+proc log(mp: var Multiprog; message: string)
 ```
