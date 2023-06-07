@@ -24,8 +24,8 @@ const
 type
   Multiprog*[T] = object
     curSlotIdx: int
-    jobs: seq[bool]
-    slots: seq[string]
+    jobs: seq[bool] ## the state of each job
+    slots: seq[string] ## the latest contents of each slot, including the progress bar
     isTotalCountGiven: bool
     totalCount: int
     doneCount: int
@@ -97,16 +97,13 @@ proc writeProgressLine[T](mp: var Multiprog[T]) =
 
 proc init*(
   _: typedesc[Multiprog];
-  jobsCount: int;
   totalCount = -1;
   outFile = stdout;
   trimMessages = true;
   tag: typedesc = DefaultTag;
 ): Multiprog[tag] =
-  let slotsCount = jobsCount + 1
-
-  result.jobs = newSeq[bool](jobsCount)
-  result.slots = newSeq[string](slotsCount)
+  result.jobs = newSeq[bool]()
+  result.slots = newSeq[string](1)
   result.f = outFile
   result.trimMessages = trimMessages
 
@@ -116,9 +113,10 @@ proc init*(
     result.totalCount = totalCount
     result.isTotalCountGiven = true
 
-  for _ in 0 ..< slotsCount:
-    result.f.writeLine("")
-  result.f.cursorUp(slotsCount)
+  # reserve space for the progress bar
+  result.f.writeLine("")
+  result.f.cursorUp(1)
+  result.writeProgressLine()
 
   result.isInitialized = true
 
@@ -140,8 +138,22 @@ proc startJob*(mp: var Multiprog; message: string): JobId =
   if not mp.isTotalCountGiven:
     inc mp.totalCount
 
-  let jobIdx = mp.jobs.find(false)
-  mp.jobs[jobIdx] = true
+  let jobIdx = block:
+    let freeJobIdx = mp.jobs.find(false)
+    if freeJobIdx >= 0:
+      # use existing free job
+      mp.jobs[freeJobIdx] = true
+      freeJobIdx
+    else:
+      # make new job and slot
+      mp.cursorToSlot(mp.slots.high)
+      for _ in 1..2:
+        # twice because we want to have one empty line under the last slot (why?)
+        mp.f.writeLine("")
+      mp.curSlotIdx += 2
+      mp.slots.add("")
+      mp.jobs.add(true)
+      mp.jobs.high
 
   mp.writeSlot(jobSlotIdx(jobIdx), message)
   mp.writeProgressLine()

@@ -14,12 +14,11 @@ randomize()
 echo "About to do some stuff..."
 
 const
-  PoolSize = 4
   Count = 20
   Interval = 250..750
 var
   inputs = (0..<Count).toSeq
-  mp = Multiprog.init(PoolSize, inputs.len)
+  mp = Multiprog.init(totalCount = inputs.len)
 
 proc doStuff(n: int): Future[void] {.async.} =
   let jobId = mp.startJob(&"working on {n}...")
@@ -31,6 +30,6 @@ proc doStuff(n: int): Future[void] {.async.} =
   await sleepAsync(rand(Interval))
   mp.finishJob(jobId, &"done with {n}")
 
-waitFor asyncPool(inputs.mapIt(() => doStuff(it)), PoolSize)
+waitFor asyncPool(inputs.mapIt(() => doStuff(it)), 4)
 
 echo "Done doing stuff."
