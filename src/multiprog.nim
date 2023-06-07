@@ -77,7 +77,7 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static b
   mp.f.write(message)
   mp.f.flushFile()
 
-func progressBar*(_: typedesc[DefaultTag]; width, doneCount, totalCount: int): string {.noInit.} =
+func progressBar(_: typedesc[DefaultTag]; width, doneCount, totalCount: int): string {.noInit.} =
   let
     rhs = " " & $doneCount & "/" & $totalCount
     size = width - rhs.len - 2
