@@ -19,7 +19,7 @@ const
   Interval = 250..750
 var
   inputs = (0..<Count).toSeq
-  mp = initMultiprog(PoolSize, inputs.len)
+  mp = Multiprog.init(PoolSize, inputs.len)
 
 proc doStuff(n: int): Future[void] {.async.} =
   let jobId = mp.startJob(&"working on {n}...")

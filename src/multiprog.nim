@@ -1,4 +1,4 @@
-# Copyright (C) 2022 Zack Guard
+# Copyright (C) 2022-2023 Zack Guard
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ const
   StatusSlotStartIdx = 1
 
 type
-  Multiprog* = object
+  Multiprog*[T] = object
     curSlotIdx: int
     jobs: seq[bool]
     slots: seq[string]
@@ -32,9 +32,9 @@ type
     f: File
     isInitialized: bool
     isFinished: bool
-    progressBar: proc (width, doneCount, totalCount: int): string
     trimMessages: bool
   JobId* = distinct int
+  DefaultTag = object
 
 template checkState(mp: Multiprog) =
   assert mp.isInitialized
@@ -77,7 +77,7 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static b
   mp.f.write(message)
   mp.f.flushFile()
 
-func defaultProgressBar*(width, doneCount, totalCount: int): string {.noInit.} =
+func progressBar*(_: typedesc[DefaultTag]; width, doneCount, totalCount: int): string {.noInit.} =
   let
     rhs = " " & $doneCount & "/" & $totalCount
     size = width - rhs.len - 2
@@ -90,23 +90,24 @@ func defaultProgressBar*(width, doneCount, totalCount: int): string {.noInit.} =
   result.add("]")
   result.add(rhs)
 
-proc writeProgressLine(mp: var Multiprog) =
-  let line = mp.progressBar(terminalWidth() - 1, mp.doneCount, mp.totalCount)
+proc writeProgressLine[T](mp: var Multiprog[T]) =
+  mixin progressBar
+  let line = progressBar(T, terminalWidth() - 1, mp.doneCount, mp.totalCount)
   mp.writeSlot(ProgressSlotIdx, line, erase = false)
 
-proc initMultiprog*(
+proc init*(
+  _: typedesc[Multiprog];
   jobsCount: int;
   totalCount = -1;
   outFile = stdout;
-  progressBar = defaultProgressBar;
   trimMessages = true;
-): Multiprog =
+  tag: typedesc = DefaultTag;
+): Multiprog[tag] =
   let slotsCount = jobsCount + 1
 
   result.jobs = newSeq[bool](jobsCount)
   result.slots = newSeq[string](slotsCount)
   result.f = outFile
-  result.progressBar = progressBar
   result.trimMessages = trimMessages
 
   if totalCount == -1:
