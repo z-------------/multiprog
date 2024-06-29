@@ -6,3 +6,4 @@
 *.swp
 .vscode
 .nimcache
+/nim.cfg

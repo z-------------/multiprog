@@ -1,4 +1,4 @@
-import multiprog
+import pkg/multiprog
 import pkg/asyncpools
 import std/[
   asyncdispatch,
