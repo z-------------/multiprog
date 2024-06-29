@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2023 Zack Guard
+# Copyright (C) 2022-2024 Zack Guard
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import ./multiprog/textUt
 import std/math
 import std/strutils
 import std/terminal
@@ -61,7 +62,7 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static b
   let message = block:
     let message =
       if mp.trimMessages:
-        message.substr(0, terminalWidth() - 2)
+        message.trim(terminalWidth() - 1)
       else:
         message
     let newlineIdx = message.find(Newlines)
