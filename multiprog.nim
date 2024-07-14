@@ -34,6 +34,7 @@ type
     isInitialized: bool
     isFinished: bool
     trimMessages: bool
+    eraseProgressBar: bool
   JobId* = distinct int
   DefaultTag = object
 
@@ -101,12 +102,14 @@ proc init*(
   totalCount = -1;
   outFile = stdout;
   trimMessages = true;
+  eraseProgressBar = false;
   tag: typedesc = DefaultTag;
 ): Multiprog[tag] =
   result.jobs = newSeq[bool]()
   result.slots = newSeq[string](1)
   result.f = outFile
   result.trimMessages = trimMessages
+  result.eraseProgressBar = eraseProgressBar
 
   if totalCount == -1:
     result.totalCount = 0
@@ -130,8 +133,11 @@ proc finish*(mp: var Multiprog) =
     mp.isFinished = true
     for jobIdx in 0..mp.jobs.high:
       mp.writeSlot(jobSlotIdx(jobIdx), "")
-    mp.cursorToSlot(ProgressSlotIdx)
-    mp.f.writeLine("")
+    if mp.eraseProgressBar:
+      mp.writeSlot(ProgressSlotIdx, "")
+    else:
+      mp.cursorToSlot(ProgressSlotIdx)
+      mp.f.writeLine("")
 
 proc startJob*(mp: var Multiprog; message: string): JobId =
   mp.checkState()
