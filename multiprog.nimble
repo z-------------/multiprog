@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.0.13"
+version       = "0.0.14"
 author        = "Zack Guard"
 description   = "Show progress for multiple concurrent tasks in the terminal"
 license       = "GPL-3.0-or-later"
