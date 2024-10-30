@@ -36,7 +36,7 @@ type
     trimMessages: bool
     eraseProgressBar: bool
   JobId* = distinct int
-  DefaultTag = object
+  DefaultTag* = object
 
 template checkState(mp: Multiprog) =
   assert mp.isInitialized
