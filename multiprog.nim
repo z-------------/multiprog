@@ -105,6 +105,7 @@ proc init*(
   eraseProgressBar = false;
   tag: typedesc = DefaultTag;
 ): Multiprog[tag] =
+  result = Multiprog[tag]()
   result.jobs = newSeq[bool]()
   result.slots = newSeq[string](1)
   result.f = outFile
