@@ -22,8 +22,11 @@ const
   ProgressSlotIdx = 0
   StatusSlotStartIdx = 1
 
+func defaultProgressBar(width, doneCount, totalCount: int): string {.raises: [].}
+
 type
-  Multiprog*[T] = object
+  ProgressBarProc* = proc (width, doneCount, totalCount: int): string {.noSideEffect, gcsafe, raises: [].}
+  Multiprog* = object
     curSlotIdx: int
     jobs: seq[bool] ## the state of each job
     slots: seq[string] ## the latest contents of each slot, including the progress bar
@@ -35,8 +38,8 @@ type
     isFinished: bool
     trimMessages: bool
     eraseProgressBar: bool
+    progressBar {.requiresInit.}: ProgressBarProc = defaultProgressBar
   JobId* = distinct int
-  DefaultTag* = object
 
 template checkState(mp: Multiprog) =
   assert mp.isInitialized
@@ -79,7 +82,7 @@ proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static b
   mp.f.write(message)
   mp.f.flushFile()
 
-func progressBar(_: typedesc[DefaultTag]; width, doneCount, totalCount: int): string {.noInit.} =
+func defaultProgressBar(width, doneCount, totalCount: int): string =
   let
     rhs = " " & $doneCount & "/" & $totalCount
     size = width - rhs.len - 2
@@ -92,9 +95,8 @@ func progressBar(_: typedesc[DefaultTag]; width, doneCount, totalCount: int): st
   result.add("]")
   result.add(rhs)
 
-proc writeProgressLine[T](mp: var Multiprog[T]) =
-  mixin progressBar
-  let line = progressBar(T, terminalWidth() - 1, mp.doneCount, mp.totalCount)
+proc writeProgressLine(mp: var Multiprog) =
+  let line = mp.progressBar(terminalWidth() - 1, mp.doneCount, mp.totalCount)
   mp.writeSlot(ProgressSlotIdx, line, erase = false)
 
 proc init*(
@@ -103,14 +105,16 @@ proc init*(
   outFile = stdout;
   trimMessages = true;
   eraseProgressBar = false;
-  tag: typedesc = DefaultTag;
-): Multiprog[tag] =
-  result = Multiprog[tag]()
+  progressBar: ProgressBarProc = nil;
+): Multiprog =
+  result = Multiprog()
   result.jobs = newSeq[bool]()
   result.slots = newSeq[string](1)
   result.f = outFile
   result.trimMessages = trimMessages
   result.eraseProgressBar = eraseProgressBar
+  if progressBar != nil:
+    result.progressBar = progressBar
 
   if totalCount == -1:
     result.totalCount = 0
