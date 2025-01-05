@@ -7,3 +7,7 @@
 .vscode
 .nimcache
 /nim.cfg
+config.nims
+nimble.develop
+nimble.paths
+nimbledeps
