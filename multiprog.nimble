@@ -10,3 +10,7 @@ srcDir        = "."
 
 requires "nim >= 2.0.6"
 requires "unicodedb"
+
+feature "example":
+  requires "termstyle"
+  requires "https://github.com/z-------------/asyncpools"
