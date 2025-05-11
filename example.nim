@@ -11,9 +11,6 @@ import std/[
   sugar,
 ]
 
-type
-  StyleTag = object
-
 func progressBar(width, doneCount, totalCount: int): string {.noInit.} =
   let text = (&"{doneCount} / {totalCount} ").align(width)
   let s = floor((doneCount / totalCount) * width.float).int
