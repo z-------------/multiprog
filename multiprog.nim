@@ -86,7 +86,11 @@ func defaultProgressBar(width, doneCount, totalCount: int): string =
   let
     rhs = " " & $doneCount & "/" & $totalCount
     size = width - rhs.len - 2
-    ratio = doneCount / totalCount
+    ratio =
+      if totalCount <= 0:
+        0.0
+      else:
+        doneCount / totalCount
     filledCount = floor(ratio * size.float).int
   result = newStringOfCap(width)
   result.add("[")
