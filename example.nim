@@ -14,7 +14,7 @@ import std/[
 type
   StyleTag = object
 
-func progressBar(_: typedesc[StyleTag]; width, doneCount, totalCount: int): string {.noInit.} =
+func progressBar(width, doneCount, totalCount: int): string {.noInit.} =
   let text = (&"{doneCount} / {totalCount} ").align(width)
   let s = floor((doneCount / totalCount) * width.float).int
   text.substr(0, s - 1).bgWhite.black & text.substr(s).underline
@@ -29,7 +29,7 @@ when isMainModule:
     Interval = 250..750
   var
     inputs = (0..<Count).toSeq
-    mp = Multiprog.init(totalCount = inputs.len, tag = StyleTag)
+    mp = Multiprog.init(totalCount = inputs.len, progressBar = progressBar)
 
   proc doStuff(n: int): Future[void] {.async.} =
     let jobId = mp.startJob(&"working on {n}...")
