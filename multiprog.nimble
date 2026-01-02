@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.0.16"
+version       = "0.0.17"
 author        = "Zack Guard"
 description   = "Show progress for multiple concurrent tasks in the terminal"
 license       = "GPL-3.0-or-later"
@@ -9,7 +9,7 @@ srcDir        = "."
 # Dependencies
 
 requires "nim >= 2.0.6"
-requires "https://github.com/z-------------/textslots"
+requires "https://github.com/z-------------/textslots >= 0.0.17"
 
 feature "example":
   requires "termstyle"
