@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import ./multiprog/textutils
+import pkg/textslots
 import std/math
 import std/strutils
 import std/terminal
@@ -27,60 +27,21 @@ func defaultProgressBar(width, doneCount, totalCount: int): string {.raises: [].
 type
   ProgressBarProc* = proc (width, doneCount, totalCount: int): string {.noSideEffect, gcsafe, raises: [].}
   Multiprog* = object
-    curSlotIdx: int
-    jobs: seq[bool] ## the state of each job
-    slots: seq[string] ## the latest contents of each slot, including the progress bar
+    ts: Textslots
     isTotalCountGiven: bool
     totalCount: int
     doneCount: int
-    f: File
-    isInitialized: bool
     isFinished: bool
-    trimMessages: bool
     eraseProgressBar: bool
     progressBar {.requiresInit.}: ProgressBarProc = defaultProgressBar
+    slotStates: seq[bool]
   JobId* = distinct int
 
 template checkState(mp: Multiprog) =
-  assert mp.isInitialized
   assert not mp.isFinished
 
 template jobSlotIdx[T: JobId or int](jobId: T): int =
   StatusSlotStartIdx + jobId.int
-
-proc cursorMoveLine(f: File; count: int) =
-  try:
-    if count < 0:
-      f.cursorUp(-count)
-    elif count > 0:
-      f.cursorDown(count)
-    f.setCursorXPos(0)
-  except OSError:
-    discard
-
-proc cursorToSlot(mp: var Multiprog; slotIdx: int) =
-  mp.f.cursorMoveLine(slotIdx - mp.curSlotIdx)
-  mp.curSlotIdx = slotIdx
-
-proc writeSlot(mp: var Multiprog; slotIdx: int; message: string; erase: static bool = true) =
-  let message = block:
-    let message =
-      if mp.trimMessages:
-        message.trim(terminalWidth() - 1)
-      else:
-        message
-    let newlineIdx = message.find(Newlines)
-    if newlineIdx != -1:
-      message[0 ..< newlineIdx]
-    else:
-      message
-
-  mp.slots[slotIdx] = message
-  mp.cursorToSlot(slotIdx)
-  when erase:
-    mp.f.eraseLine()
-  mp.f.write(message)
-  mp.f.flushFile()
 
 func defaultProgressBar(width, doneCount, totalCount: int): string =
   let
@@ -101,7 +62,7 @@ func defaultProgressBar(width, doneCount, totalCount: int): string =
 
 proc writeProgressLine(mp: var Multiprog) =
   let line = mp.progressBar(terminalWidth() - 1, mp.doneCount, mp.totalCount)
-  mp.writeSlot(ProgressSlotIdx, line, erase = false)
+  mp.ts.writeSlot(ProgressSlotIdx, line, erase = false)
 
 proc init*(
   _: typedesc[Multiprog];
@@ -111,12 +72,10 @@ proc init*(
   eraseProgressBar = false;
   progressBar: ProgressBarProc = nil;
 ): Multiprog =
-  result = Multiprog()
-  result.jobs = newSeq[bool]()
-  result.slots = newSeq[string](1)
-  result.f = outFile
-  result.trimMessages = trimMessages
-  result.eraseProgressBar = eraseProgressBar
+  result = Multiprog(
+    ts: Textslots.init(outFile, trimMessages),
+    eraseProgressBar: eraseProgressBar,
+  )
   if progressBar != nil:
     result.progressBar = progressBar
 
@@ -126,12 +85,7 @@ proc init*(
     result.totalCount = totalCount
     result.isTotalCountGiven = true
 
-  # reserve space for the progress bar
-  result.f.writeLine("")
-  result.f.cursorUp(1)
   result.writeProgressLine()
-
-  result.isInitialized = true
 
 proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
   mp.totalCount = totalCount
@@ -140,13 +94,13 @@ proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
 proc finish*(mp: var Multiprog) =
   if not mp.isFinished:
     mp.isFinished = true
-    for jobIdx in 0..mp.jobs.high:
-      mp.writeSlot(jobSlotIdx(jobIdx), "")
-    if mp.eraseProgressBar:
-      mp.writeSlot(ProgressSlotIdx, "")
-    else:
-      mp.cursorToSlot(ProgressSlotIdx)
-      mp.f.writeLine("")
+    let firstIdx =
+      if mp.eraseProgressBar:
+        0
+      else:
+        1
+    mp.ts.clearSlots(firstIdx .. mp.ts.slots.high)
+    mp.ts.cursorToSlot(1)
 
 proc startJob*(mp: var Multiprog; message: string): JobId =
   mp.checkState()
@@ -155,49 +109,34 @@ proc startJob*(mp: var Multiprog; message: string): JobId =
     inc mp.totalCount
 
   let jobIdx = block:
-    let freeJobIdx = mp.jobs.find(false)
-    if freeJobIdx >= 0:
+    let freeJobIdx = mp.slotStates.find(false)
+    if freeJobIdx != -1:
       # use existing free job
-      mp.jobs[freeJobIdx] = true
+      mp.slotStates[freeJobIdx] = true
       freeJobIdx
     else:
-      # make new job and slot
-      mp.cursorToSlot(mp.slots.high)
-      for _ in 1..2:
-        # twice because we want to have one empty line under the last slot (why?)
-        mp.f.writeLine("")
-      mp.curSlotIdx += 2
-      mp.slots.add("")
-      mp.jobs.add(true)
-      mp.jobs.high
+      mp.ts.addSlot()
+      mp.slotStates.add(true)
+      mp.ts.slots.high - 1
 
-  mp.writeSlot(jobSlotIdx(jobIdx), message)
+  mp.ts.writeSlot(jobSlotIdx(jobIdx), message)
   mp.writeProgressLine()
 
   JobId(jobIdx)
 
 proc updateJob*(mp: var Multiprog; jobId: JobId; message: string) =
   mp.checkState()
-  mp.writeSlot(jobSlotIdx(jobId), message)
+  mp.ts.writeSlot(jobSlotIdx(jobId), message)
 
 proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
   mp.checkState()
 
   mp.updateJob(jobId, message)
 
-  mp.jobs[jobId.int] = false
+  mp.slotStates[jobId.int] = false
   inc mp.doneCount
 
   mp.writeProgressLine()
 
 proc log*(mp: var Multiprog; message: string) =
-  mp.checkState()
-
-  mp.cursorToSlot(0)
-  for line in message.splitLines:
-    mp.f.eraseLine()
-    mp.f.writeLine(line)
-  for line in mp.slots:
-    mp.f.eraseLine()
-    mp.f.writeLine(line)
-  mp.curSlotIdx = mp.slots.len
+  mp.ts.log(message)

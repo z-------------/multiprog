@@ -9,7 +9,7 @@ srcDir        = "."
 # Dependencies
 
 requires "nim >= 2.0.6"
-requires "unicodedb"
+requires "https://github.com/z-------------/textslots"
 
 feature "example":
   requires "termstyle"
