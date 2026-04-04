@@ -23,8 +23,6 @@ const
   ProgressSlotIdx = 0
   StatusSlotStartIdx = 1
 
-func defaultProgressBar(width, doneCount, totalCount: int): string {.raises: [].}
-
 type
   ProgressBarProc* = proc (width, doneCount, totalCount: int): string {.noSideEffect, gcsafe, raises: [].}
   Multiprog* = object
@@ -34,7 +32,7 @@ type
     doneCount: int
     isFinished: bool
     eraseProgressBar: bool
-    progressBar {.requiresInit.}: ProgressBarProc = defaultProgressBar
+    progressBar {.requiresInit.}: ProgressBarProc
     slotStates: seq[bool]
     useCustomProgress: bool
     customProgresses: seq[tuple[done, total: int]]
@@ -46,22 +44,27 @@ template checkState(mp: Multiprog) =
 template jobSlotIdx[T: JobId or int](jobId: T): int =
   StatusSlotStartIdx + jobId.int
 
-func defaultProgressBar(width, doneCount, totalCount: int): string =
-  let
-    rhs = " " & $doneCount & "/" & $totalCount
-    size = width - rhs.len - 2
-    ratio =
-      if totalCount <= 0:
-        0.0
-      else:
-        doneCount / totalCount
-    filledCount = floor(ratio * size.float).int
-  result = newStringOfCap(width)
-  result.add("[")
-  result.add('#'.repeat(filledCount))
-  result.add(' '.repeat(size - filledCount))
-  result.add("]")
-  result.add(rhs)
+func defaultProgressBar*(formatCount: proc (count: int): string {.noSideEffect, gcsafe, raises: [].} = nil): ProgressBarProc =
+  proc (width, doneCount, totalCount: int): string =
+    let
+      rhs =
+        if formatCount != nil:
+          " " & formatCount(doneCount) & "/" & formatCount(totalCount)
+        else:
+          " " & $doneCount & "/" & $totalCount
+      size = width - rhs.len - 2
+      ratio =
+        if totalCount <= 0:
+          0.0
+        else:
+          doneCount / totalCount
+      filledCount = floor(ratio * size.float).int
+    result = newStringOfCap(width)
+    result.add("[")
+    result.add('#'.repeat(filledCount))
+    result.add(' '.repeat(size - filledCount))
+    result.add("]")
+    result.add(rhs)
 
 proc writeProgressLine(mp: var Multiprog) =
   let line = mp.progressBar(terminalWidth() - 1, mp.doneCount, mp.totalCount)
@@ -73,14 +76,12 @@ proc init*(
   outFile = stdout;
   trimMessages = true;
   eraseProgressBar = false;
-  progressBar: ProgressBarProc = nil;
 ): Multiprog =
   result = Multiprog(
     ts: Textslots.init(outFile, trimMessages),
     eraseProgressBar: eraseProgressBar,
+    progressBar: defaultProgressBar(),
   )
-  if progressBar != nil:
-    result.progressBar = progressBar
 
   if totalCount == -1:
     result.totalCount = 0
@@ -89,6 +90,9 @@ proc init*(
     result.isTotalCountGiven = true
 
   result.writeProgressLine()
+
+proc `progressBar=`*(mp: var Multiprog; progressBar: ProgressBarProc) =
+  mp.progressBar = progressBar
 
 proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
   mp.totalCount = totalCount

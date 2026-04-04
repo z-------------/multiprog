@@ -26,7 +26,8 @@ when isMainModule:
     Interval = 250..750
   var
     inputs = (0..<Count).toSeq
-    mp = Multiprog.init(totalCount = inputs.len, progressBar = progressBar)
+    mp = Multiprog.init(totalCount = inputs.len)
+  mp.progressBar = progressBar
 
   proc doStuff(n: int): Future[void] {.async.} =
     let jobId = mp.startJob(&"working on {n}...")
