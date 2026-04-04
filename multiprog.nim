@@ -17,6 +17,7 @@ import pkg/textslots
 import std/math
 import std/strutils
 import std/terminal
+import std/sequtils
 
 const
   ProgressSlotIdx = 0
@@ -35,6 +36,8 @@ type
     eraseProgressBar: bool
     progressBar {.requiresInit.}: ProgressBarProc = defaultProgressBar
     slotStates: seq[bool]
+    useCustomProgress: bool
+    customProgresses: seq[tuple[done, total: int]]
   JobId* = distinct int
 
 template checkState(mp: Multiprog) =
@@ -91,6 +94,9 @@ proc `totalCount=`*(mp: var Multiprog; totalCount: Natural) =
   mp.totalCount = totalCount
   mp.isTotalCountGiven = true
 
+proc `useCustomProgress=`*(mp: var Multiprog; useCustomProgress: bool) =
+  mp.useCustomProgress = useCustomProgress 
+
 proc finish*(mp: var Multiprog) =
   if not mp.isFinished:
     mp.isFinished = true
@@ -105,7 +111,7 @@ proc finish*(mp: var Multiprog) =
 proc startJob*(mp: var Multiprog; message: string): JobId =
   mp.checkState()
 
-  if not mp.isTotalCountGiven:
+  if not mp.isTotalCountGiven and not mp.useCustomProgress:
     inc mp.totalCount
 
   let jobIdx = block:
@@ -113,10 +119,12 @@ proc startJob*(mp: var Multiprog; message: string): JobId =
     if freeJobIdx != -1:
       # use existing free job
       mp.slotStates[freeJobIdx] = true
+      mp.customProgresses[freeJobIdx] = (0, 0)
       freeJobIdx
     else:
       mp.ts.addSlot()
       mp.slotStates.add(true)
+      mp.customProgresses.add((0, 0))
       mp.ts.slots.high - 1
 
   mp.ts.writeSlot(jobSlotIdx(jobIdx), message)
@@ -134,9 +142,21 @@ proc finishJob*(mp: var Multiprog; jobId: JobId; message: string) =
   mp.updateJob(jobId, message)
 
   mp.slotStates[jobId.int] = false
-  inc mp.doneCount
+  if mp.useCustomProgress:
+    mp.customProgresses[jobId.int].done = mp.customProgresses[jobId.int].total
+    mp.doneCount = mp.customProgresses.foldl(a + b.done, 0)
+  else:
+    inc mp.doneCount
 
   mp.writeProgressLine()
 
 proc log*(mp: var Multiprog; message: string) =
   mp.ts.log(message)
+
+proc updateJobProgress*(mp: var Multiprog; jobId: JobId; done, total: int) =
+  if not mp.useCustomProgress:
+    raise newException(ValueError, "not allowed unless useCustomProgress is true")
+  mp.customProgresses[jobId.int] = (done, total)
+  mp.doneCount = mp.customProgresses.foldl(a + b.done, 0)
+  mp.totalCount = mp.customProgresses.foldl(a + b.total, 0)
+  mp.writeProgressLine()
